@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Project Neighborhood Map</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/styles.css"> 
+    </head>
+    <body>
+        <div class="container-fluid" style="height: 100%">
+            <div class="row" style="height: 100%">
+
+                <div  class="col-sm-3"> 
+                    <!-- area for the Zoo search feature-->
+                    <h3>Zoo Search Filter:</h3>
+                    <input id="searchbox" type="text" data-bind="textInput: searchBox , event: {keypress: searchChar}" >
+                    <button id="goButton" data-bind=" click: function() {searchGo('go')}">Go</button>
+                    <button id="reesetButton" data-bind=" click: function() {searchGo('reset')}">Reset</button>
+
+                    <br>
+                    <hr> 
+                    <!-- area for the listing of the results from the search -->
+                    <h3>Top 10 Zoo Results:</h3>
+                    <h4 data-bind="visible: noListMessage">No Search data available at this time.</h4>
+
+                    
+                    <!-- area for the accordian list to open up and show the NYTimes articles -->
+                    <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true" data-bind='foreach: listItems'>
+                        <div class="panel panel-default" >
+                            <div class="panel-heading" role="tab"  data-bind='attr: {id:  "heading"+listNum }'>     
+                                <h4 class="panel-title">
+                                <a role="button" data-toggle="collapse" data-parent="#accordion"  aria-expanded="false" data-bind=' html: name, attr: {href: "#collapse"+listNum, onclick: "listView.listClick(&#39;"+name+"&#39;);" , "aria-controls": "collapse"+listNum}'>
+                                </a> 
+                                </h4>
+                            </div> 
+                            <div class="panel-collapse collapse" role="tabpanel" data-bind=' attr: {id: "collapse"+listNum, "aria-labelledby": "heading"+listNum}' >
+                                <div class="panel-body"> NYT articles:
+                                    <div data-bind='attr: {id:  "nytarticles"+listNum }'>
+                                        <div data-bind="'visible': $parent.noNYTMessage">No Articles at this time</div>
+                                        <ol data-bind="foreach: $parent.nytArticles">
+                                            <li>
+                                                <a href="#" data-bind="text: headline.main, attr: { href: web_url }" target="_blank"></a>
+                                            </li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- area for the googgle map to show up in -->
+                <div  id="map" class="col-sm-9" >
+                    Google Maps not available right now.  Try later.
+                </div>
+            </div>
+        </div>   
+
+        <script src='js/knockout-3.4.0.js'></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <script src='js/bootstrap.min.js'></script>
+        <script src='js/app.js'></script>
+        <script async defer
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBR3hu_CyJ24vYhpuhpcpcbzD9_2y-yUyU&v=3&libraries=places&callback=mapView.init"></script>
+    </body>
+</html>
