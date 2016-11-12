@@ -2,10 +2,16 @@
 var ViewModel = function() {
     var self = this;
 
-    // array of the top 10 search items to be listed
-    self.listItems = ko.observableArray([]);
+    //array of items that were searched for
+    self.searchItems = ko.observableArray([]);
 
-    // array of the NYTimes articles for teh highlited zoo
+    //text input for filter box
+    self.filterBox = ko.observable('');
+
+    // array of the top 10 search/filtered items to be listed
+    self.listItems = ko.observableArray([]);    
+
+    // array of the NYTimes articles for the highlited zoo in list area
     self.nytArticles = ko.observableArray([]);
 
     // an array of all the markers created for the map
@@ -20,7 +26,12 @@ var ViewModel = function() {
     // if there are no NYTimes articles, then a message gets displayed
     self.noNYTMessage = ko.observable(true);
 
-    // method to add a search result to the list array
+    // add items to the search array
+    self.addSearch = function(place) {
+        self.searchItems.push(place);
+    };
+
+    // method to add results to the list array
     self.addItems = function(place) {
         self.listItems.push(place);
     };
@@ -35,13 +46,23 @@ var ViewModel = function() {
         self.nytArticles.push(article);
     };
 
-    // clear all the markers from the map and empty the marker array.
-    self.clearItems = function() {
+    // reset the searchbox , list items, and markers.
+    self.clearSearch= function() {
+        self.searchItems.removeAll();
         self.listItems.removeAll();
         for (var i = 0; i < self.markers.length; i++) {
             self.markers[i].setMap(null);
         };
         self.markers = [];
+    };
+
+    // clear all the list items and remove markers from map only. 
+    // used when filtering is activated
+    self.clearItems = function() {
+        self.listItems.removeAll();
+        for (var i = 0; i < self.markers.length; i++) {
+            self.markers[i].setMap(null);
+        };
     };
 
     // remove all the articles from the article array.
@@ -59,14 +80,13 @@ var ViewModel = function() {
     };
 
     // check to see if the zoo search found any results and set the error message 
-    // if there were none.  also clear out the search box after searching.
+    // if there were none. 
     self.chkItems = function() {
         if(self.listItems().length == 0){
             self.noListMessage(true);
         }else {
             self.noListMessage(false);
         };
-        self.searchBox('');
     };
 
     // this is the key press event function for the search box.
@@ -78,18 +98,21 @@ var ViewModel = function() {
         return true;
     };
 
-    // this is the function for the Search Go and Reset button if pressed.
+    // this is the function for the Search Go and Reset button if clicked.
     // It will start the update for the list based off the search.
     self.searchGo = function(button) {
-        if(button == 'go') {
+        if(button == 'go') { // results pulled by search
+            self.filterBox('');
             listView.zooQuery(listView.zooRequestInitial.type, self.searchBox());
-        }else if(button == 'reset') {
+        }else if(button == 'reset') { // results default to generic search
+            self.searchBox('');
+            self.filterBox('');
             listView.zooQuery(listView.zooRequestInitial.type, listView.zooRequestInitial.query);
         }
     };
 
     // this method will return an info object to be populated on the pop up info window
-    // based on the marker clicked title
+    // based on the marker clicked.  THe list is matching the marker by the name/title
     self.getInfo = function(title) {
         var address = '';
         var lng = '';
@@ -102,7 +125,83 @@ var ViewModel = function() {
             };
         });
         return {address: address, lng: lng, lat: lat} ;
-    }
+    };
+    
+    // filter function when key is pressed
+    // clear list items and reload list and markers that match search.
+    self.filter = function(value) {
+        self.clearItems();
+        self.clearArticles();
+        self.searchItems().forEach(function(items) {
+          if(items.name.toLowerCase().indexOf(vm.filterBox().toLowerCase()) !== -1  ) {
+            vm.addItems(items);
+            vm.markers.forEach(function(marker){
+                if(marker.title == items.name){
+                      marker.setMap(mapView.map);
+                }
+            })
+          }
+        });
+    };
+
+    // method is ran when user clicks on an item in the list
+    listClick = function() {
+        var zooName = this.name;
+        
+        // make sure any open window is closed and marker not assigned.
+        mapView.popInfowindow.close();
+        mapView.popInfowindow.marker = '';
+
+        // change the marker's color defaulting all others to blue 
+        // the clicked item's marker turns yellow.
+        vm.markers.forEach(function(marker) {
+
+            if(marker.title == zooName){
+                marker.setIcon(mapView.markerImageYellow);
+                mapView.popInfoWindow(marker, mapView.popInfowindow);
+            } else {
+                marker.setIcon(mapView.markerImageBlue);
+            };
+        });
+
+        //Get articles from the NY Times for the clicked item
+        // clear all the articles if any existed 
+        vm.clearArticles();
+        
+        // use the NYTimes api to search for the zoo name that was clicked.
+        var nytUrl = 'https://api.nytimes.com/svc/search/v2/articlesearch.json';
+        nytUrl = nytUrl + '?q="'+zooName+'"&api-key=9e4e65b482504a9caaed29ce341a6f72&page=0';
+        $.getJSON( nytUrl, function(data) {
+            articles = data.response.docs;
+            
+            // get the top 5 articles and add to the articles array.
+            for (var i = 0; i< articles.length && i< 5  ; i++){
+                vm.addArticles(articles[i]);
+            };
+
+            // check to see if there are any articles found.  if not, disply message.
+            vm.chkNYT();
+
+        }).error( function() {
+            alert("We are having problems retrieving articles.");
+        });
+
+        return(true);
+    };
+
+    // when mouse over the list items, turn marker yellow and open pop up window.
+    listMouseOver = function() {
+        var zooName = this.name;
+        vm.markers.forEach(function(marker) {
+        if(marker.title == zooName){
+            marker.setIcon(mapView.markerImageYellow);
+            mapView.popInfoWindow(marker, mapView.popInfowindow);
+        } else {
+            marker.setIcon(mapView.markerImageBlue);
+        };
+    });
+      return(true);
+    };
 };
 
 var mapView = {
@@ -123,18 +222,22 @@ var mapView = {
 
       //  map is valid.
       }else{
-          // create a pop up info window for the map
-          this.popInfowindow = new google.maps.InfoWindow(); 
 
           // create the four different color markers taht will be used
           // blue - default, 
           // yellow - mouse over on a blue marker
-          // red - if the list item was clicked it turns red
-          // ggreen - mouse over on a red marker.
           this.markerImageYellow =  this.makeMarkerIcon('FFFF24');
-          this.markerImageRed =  this.makeMarkerIcon('FF0000');
           this.markerImageBlue =  this.makeMarkerIcon('0091ff');
-          this.markerImageGreen =   this.makeMarkerIcon('008000');
+
+          // create a pop up info window for the map
+          this.popInfowindow = new google.maps.InfoWindow(); 
+          this.popInfowindow.marker = '';
+
+          // Make sure the marker property is cleared if the infowindow is closed.
+          this.popInfowindow.addListener('closeclick', function() {
+              mapView.popInfowindow.marker.setIcon(mapView.markerImageBlue);
+              mapView.popInfowindow.marker = '';
+          });
 
           // display the default search list.
           listView.init();
@@ -161,10 +264,7 @@ var mapView = {
           infowin.setContent('');
           // set the infowindow to the marker that was clicked.
           infowin.marker = marker;
-          // Make sure the marker property is cleared if the infowindow is closed.
-          infowin.addListener('closeclick', function() {
-              infowin.marker = null;
-          });
+
           // display info from the google place search for the marked marker.
           infowin.setContent('<div>' + marker.title + '</div>'
               +'<div>ADDRESS: '+ vm.getInfo(marker.title).address + '</div>'
@@ -172,6 +272,9 @@ var mapView = {
               +'<div>LATITUDE: '+  vm.getInfo(marker.title).lng + '</div>'                            );
           infowin.open(map, marker);
         }
+    },
+    googleMapError: function() {
+      alert("google Map not available.  Try later.");
     }
 }
 var listView = {
@@ -191,54 +294,9 @@ var listView = {
         this.zooRequest = { type: searchType, query: searchQuery };
         this.zooList.textSearch(this.zooRequest, this.listzoo );
     },
-    // method is ran when user clicks on an item in the list
-    listClick: function(zooName) {
-        console.log(zooName);
-
-        // change the marker's color defaulting to blue and the clicked item's marker turns red.
-        // the marker is reset back to blue when the list is clicked again.
-        vm.markers.forEach(function(marker) {
-            if(marker.title == zooName){
-                if(marker.icon.url == mapView.markerImageRed.url){
-                    marker.setIcon(mapView.markerImageBlue);
-                }else if(marker.icon.url == mapView.markerImageBlue.url){
-                    marker.setIcon(mapView.markerImageRed);
-                }
-            } else {
-                marker.setIcon(mapView.markerImageBlue);
-            };
-        });
-
-        //Get articles from the NY Times for the clicked item
-
-        // clear all the articles if any existed 
-        vm.clearArticles();
-
-        // replace the single quote for NYTimes search.
-        zooName = zooName.replace('&#39;',"'");
-        
-        // use the NYTimes api to search for the zoo name that was clicked.
-        var nytUrl = 'https://api.nytimes.com/svc/search/v2/articlesearch.json';
-        nytUrl = nytUrl + '?q="'+zooName+'"&api-key=9e4e65b482504a9caaed29ce341a6f72&page=0';
-        $.getJSON( nytUrl, function(data) {
-            articles = data.response.docs;
-            
-            // get the top 5 articles and add to the articles array.
-            for (var i = 0; i< articles.length && i< 5  ; i++){
-                vm.addArticles(articles[i]);
-            };
-
-            // check to see if there are any articles found.  if not, disply message.
-            vm.chkNYT();
-
-        }).error( function() {
-            alert("We are having problems retrieving articles.");
-        });
-
-    },
     listzoo: function (results, status) {
         // clear any existing lsit and articles
-        vm.clearItems();
+        vm.clearSearch();
         vm.clearArticles();
 
         // check status and create list items
@@ -255,9 +313,10 @@ var listView = {
                     results[i].listNum = i;
 
                     //replace all single quotes with valid html escapes
-                    results[i].name = results[i].name.replace("\'",'&#39;');
+                   // results[i].name = results[i].name.replace("\'",'&#39;');
  
-                    // add the item to the list array.
+                    // add the item to the search and list arrays.
+                    vm.addSearch(results[i]);
                     vm.addItems(results[i]);
 
                     // create a marker for the list item
@@ -273,27 +332,42 @@ var listView = {
 
                     // add the mouse over event handler to the marker
                     marker.addListener('mouseover', function() {
-                        if(this.icon.url == mapView.markerImageBlue.url) {
-                            this.setIcon(mapView.markerImageYellow);
-                        }else if(this.icon.url == mapView.markerImageRed.url) {
-                            this.setIcon(mapView.markerImageGreen);
-                        }
+                        var zooName = this.title;
+                        // turn marker yellow for mouse over, otherwise blue
+                        // also keep pop up window marker yellow
+                        vm.markers.forEach(function(marker) {
+                            if(zooName == marker.title || mapView.popInfowindow.marker.title == marker.title) {
+                               marker.setIcon(mapView.markerImageYellow);
+                            }else{
+                                marker.setIcon(mapView.markerImageBlue);
+                            };
+                        });
                      });
 
                     // add the mouse out event handler to the marker
                     marker.addListener('mouseout', function() {
-                        if(this.icon.url == mapView.markerImageGreen.url) {
-                            this.setIcon(mapView.markerImageRed);
-                        }else if(this.icon.url == mapView.markerImageYellow.url) {
-                            this.setIcon(mapView.markerImageBlue);
-                        }
+                        // turn marker blue for mouse out
+                        // also keep pop up window marker yellow
+                        vm.markers.forEach(function(marker) {
+                            if(mapView.popInfowindow.marker.title == marker.title) {
+                                marker.setIcon(mapView.markerImageYellow);
+                            }else{
+                                marker.setIcon(mapView.markerImageBlue);
+                            };
+                        });
                     });
 
-                    // add the click event to the marker fro teh pop up window.
+                    // add the click event to the marker for the pop up window.
                     marker.addListener('click', function() {
                         mapView.popInfoWindow(this, mapView.popInfowindow);
+                        // rest all markers to blue
+                        vm.markers.forEach(function(marker) {
+                                marker.setIcon(mapView.markerImageBlue);
+                        });
+                        // set pop up marker to yellow
+                        this.setIcon(mapView.markerImageYellow);
                     });
-
+                    // set map zoom based off of the markers.
                     bounds.extend(marker.position);
                 }
             }
@@ -304,6 +378,9 @@ var listView = {
             if(mapView.map.getZoom() >6) {
                 mapView.map.setZoom(6);
             }
+        } else {
+          alert("Google Places Search not available.  Try again.")
+          vm.noListMessage(true);
         }
 
         // display error message if no search items are found.
@@ -313,3 +390,4 @@ var listView = {
 
 // declare the view model variable global to be used in other functions.
 var vm = new ViewModel();
+vm.filterBox.subscribe(vm.filter);
