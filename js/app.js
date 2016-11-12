@@ -52,7 +52,7 @@ var ViewModel = function() {
         self.listItems.removeAll();
         for (var i = 0; i < self.markers.length; i++) {
             self.markers[i].setMap(null);
-        };
+        }
         self.markers = [];
     };
 
@@ -62,7 +62,7 @@ var ViewModel = function() {
         self.listItems.removeAll();
         for (var i = 0; i < self.markers.length; i++) {
             self.markers[i].setMap(null);
-        };
+        }
     };
 
     // remove all the articles from the article array.
@@ -72,21 +72,21 @@ var ViewModel = function() {
 
     // check to see if there are any articles found and set the error message if there were none.
     self.chkNYT = function() {
-        if(self.nytArticles().length == 0){
+        if(self.nytArticles().length === 0){
             self.noNYTMessage(true);
         }else {
             self.noNYTMessage(false);
-        };
+        }
     };
 
     // check to see if the zoo search found any results and set the error message 
     // if there were none. 
     self.chkItems = function() {
-        if(self.listItems().length == 0){
+        if(self.listItems().length === 0){
             self.noListMessage(true);
         }else {
             self.noListMessage(false);
-        };
+        }
     };
 
     // this is the key press event function for the search box.
@@ -94,7 +94,7 @@ var ViewModel = function() {
     self.searchChar = function(data, event) {
         if(event.keyCode == 10 || event.keyCode == 13) {
             listView.zooQuery(listView.zooRequestInitial.type, self.searchBox());
-        };
+        }
         return true;
     };
 
@@ -121,8 +121,8 @@ var ViewModel = function() {
             if(result.name == title){
               address = result.formatted_address;
               lng = result.geometry.location.lng();
-              lat = result.geometry.location.lat();;
-            };
+              lat = result.geometry.location.lat();
+            }
         });
         return {address: address, lng: lng, lat: lat} ;
     };
@@ -139,7 +139,7 @@ var ViewModel = function() {
                 if(marker.title == items.name){
                       marker.setMap(mapView.map);
                 }
-            })
+            });
           }
         });
     };
@@ -161,7 +161,7 @@ var ViewModel = function() {
                 mapView.popInfoWindow(marker, mapView.popInfowindow);
             } else {
                 marker.setIcon(mapView.markerImageBlue);
-            };
+            }
         });
 
         //Get articles from the NY Times for the clicked item
@@ -177,7 +177,7 @@ var ViewModel = function() {
             // get the top 5 articles and add to the articles array.
             for (var i = 0; i< articles.length && i< 5  ; i++){
                 vm.addArticles(articles[i]);
-            };
+            }
 
             // check to see if there are any articles found.  if not, disply message.
             vm.chkNYT();
@@ -198,7 +198,7 @@ var ViewModel = function() {
             mapView.popInfoWindow(marker, mapView.popInfowindow);
         } else {
             marker.setIcon(mapView.markerImageBlue);
-        };
+        }
     });
       return(true);
     };
@@ -241,7 +241,7 @@ var mapView = {
 
           // display the default search list.
           listView.init();
-      };
+      }
   },
   // method to create the colored markers being used.
   // colored markers initiated from map init.
@@ -266,12 +266,17 @@ var mapView = {
           infowin.marker = marker;
 
           // display info from the google place search for the marked marker.
-          infowin.setContent('<div>' + marker.title + '</div>'
-              +'<div>ADDRESS: '+ vm.getInfo(marker.title).address + '</div>'
-              +'<div>LONGITUDE: '+  vm.getInfo(marker.title).lat + '</div>'
-              +'<div>LATITUDE: '+  vm.getInfo(marker.title).lng + '</div>'                            );
+          infowin.setContent('<div>' + marker.title + '</div>' +'<div>ADDRESS: '
+            + vm.getInfo(marker.title).address + '</div>' +'<div>LONGITUDE: '
+            +  vm.getInfo(marker.title).lat + '</div>' +'<div>LATITUDE: '
+            +  vm.getInfo(marker.title).lng + '</div>');
           infowin.open(map, marker);
         }
+    },
+    markersBlue: function() {
+        vm.markers.forEach(function(marker) {
+            marker.setIcon(mapView.markerImageBlue);
+        });
     },
     googleMapError: function() {
       alert("google Map not available.  Try later.");
@@ -312,9 +317,6 @@ var listView = {
                     // list num is for the item number in the array to be used in the HTML
                     results[i].listNum = i;
 
-                    //replace all single quotes with valid html escapes
-                   // results[i].name = results[i].name.replace("\'",'&#39;');
- 
                     // add the item to the search and list arrays.
                     vm.addSearch(results[i]);
                     vm.addItems(results[i]);
@@ -332,38 +334,20 @@ var listView = {
 
                     // add the mouse over event handler to the marker
                     marker.addListener('mouseover', function() {
-                        var zooName = this.title;
-                        // turn marker yellow for mouse over, otherwise blue
-                        // also keep pop up window marker yellow
-                        vm.markers.forEach(function(marker) {
-                            if(zooName == marker.title || mapView.popInfowindow.marker.title == marker.title) {
-                               marker.setIcon(mapView.markerImageYellow);
-                            }else{
-                                marker.setIcon(mapView.markerImageBlue);
-                            };
-                        });
+                        mapView.markersBlue();
+                        this.setIcon(mapView.markerImageYellow);
                      });
 
                     // add the mouse out event handler to the marker
                     marker.addListener('mouseout', function() {
-                        // turn marker blue for mouse out
-                        // also keep pop up window marker yellow
-                        vm.markers.forEach(function(marker) {
-                            if(mapView.popInfowindow.marker.title == marker.title) {
-                                marker.setIcon(mapView.markerImageYellow);
-                            }else{
-                                marker.setIcon(mapView.markerImageBlue);
-                            };
-                        });
+                        mapView.markersBlue();
                     });
 
                     // add the click event to the marker for the pop up window.
                     marker.addListener('click', function() {
                         mapView.popInfoWindow(this, mapView.popInfowindow);
-                        // rest all markers to blue
-                        vm.markers.forEach(function(marker) {
-                                marker.setIcon(mapView.markerImageBlue);
-                        });
+                        mapView.markersBlue();
+
                         // set pop up marker to yellow
                         this.setIcon(mapView.markerImageYellow);
                     });
@@ -379,14 +363,14 @@ var listView = {
                 mapView.map.setZoom(6);
             }
         } else {
-          alert("Google Places Search not available.  Try again.")
+          alert("Google Places Search not available.  Try again.");
           vm.noListMessage(true);
         }
 
         // display error message if no search items are found.
         vm.chkItems();
     }
-}
+};
 
 // declare the view model variable global to be used in other functions.
 var vm = new ViewModel();
