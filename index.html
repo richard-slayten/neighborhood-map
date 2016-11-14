@@ -46,7 +46,7 @@
                         <div class="panel panel-default" >
                             <div class="panel-heading" role="tab"  data-bind='attr: {id:  "heading"+listNum }'>     
                                 <h4 class="panel-title">
-                                <a role="button" data-toggle="collapse" data-parent="#accordion"  aria-expanded="false" data-bind=' html: name, attr: {href: "#collapse"+listNum, "aria-controls": "collapse"+listNum}, click: listClick, event: {mouseover: listMouseOver}'>
+                                <a role="button" data-toggle="collapse" data-parent="#accordion"  aria-expanded="false" data-bind=' html: name, attr: {href: "#collapse"+listNum, "aria-controls": "collapse"+listNum}, click: function(){vm.listClick(name)}, event: {mouseover: listMouseOver}'>
                                 </a> 
                                 </h4>
                             </div> 

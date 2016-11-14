@@ -145,9 +145,16 @@ var ViewModel = function() {
     };
 
     // method is ran when user clicks on an item in the list
-    listClick = function() {
-        var zooName = this.name;
-        
+    self.listClick = function(zooName) {
+ //       console.log(zooName);
+        // collapse the list item that matches the marker click.
+        vm.listItems().forEach(function(item) {
+            $('#collapse'+item.listNum).collapse('hide');
+            if(zooName == item.name){
+                $('#collapse'+item.listNum).collapse('show');
+            }
+        });
+
         // make sure any open window is closed and marker not assigned.
         mapView.popInfowindow.close();
         mapView.popInfowindow.marker = '';
@@ -201,6 +208,11 @@ var ViewModel = function() {
         }
     });
       return(true);
+    };
+
+    // when clicking on a marker, call the lsit click to link the list view.
+    self.listClickMarker = function() {
+        vm.listClick(this.title);
     };
 };
 
@@ -266,10 +278,7 @@ var mapView = {
           infowin.marker = marker;
 
           // display info from the google place search for the marked marker.
-          infowin.setContent('<div>' + marker.title + '</div>' +'<div>ADDRESS: '
-            + vm.getInfo(marker.title).address + '</div>' +'<div>LONGITUDE: '
-            +  vm.getInfo(marker.title).lat + '</div>' +'<div>LATITUDE: '
-            +  vm.getInfo(marker.title).lng + '</div>');
+          infowin.setContent('<div>' + marker.title + '</div>' +'<div>ADDRESS: '+ vm.getInfo(marker.title).address + '</div>' +'<div>LONGITUDE: '+  vm.getInfo(marker.title).lat + '</div>' +'<div>LATITUDE: '+  vm.getInfo(marker.title).lng + '</div>');
           infowin.open(map, marker);
         }
     },
@@ -280,8 +289,15 @@ var mapView = {
     },
     googleMapError: function() {
       alert("google Map not available.  Try later.");
+    },
+    mouseOverMarker: function() {
+        mapView.markersBlue();
+        this.setIcon(mapView.markerImageYellow);
+    },
+    mouseOutMarker: function() {
+        mapView.markersBlue();
     }
-}
+};
 var listView = {
     // ran from initial map view to set up the original list. 
     init: function() {
@@ -333,24 +349,14 @@ var listView = {
                     vm.addMarker(marker);
 
                     // add the mouse over event handler to the marker
-                    marker.addListener('mouseover', function() {
-                        mapView.markersBlue();
-                        this.setIcon(mapView.markerImageYellow);
-                     });
+                    marker.addListener('mouseover', mapView.mouseOverMarker);
 
                     // add the mouse out event handler to the marker
-                    marker.addListener('mouseout', function() {
-                        mapView.markersBlue();
-                    });
+                    marker.addListener('mouseout', mapView.mouseOutMarker);
 
                     // add the click event to the marker for the pop up window.
-                    marker.addListener('click', function() {
-                        mapView.popInfoWindow(this, mapView.popInfowindow);
-                        mapView.markersBlue();
+                    marker.addListener('click', vm.listClickMarker );
 
-                        // set pop up marker to yellow
-                        this.setIcon(mapView.markerImageYellow);
-                    });
                     // set map zoom based off of the markers.
                     bounds.extend(marker.position);
                 }
